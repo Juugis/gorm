@@ -32,6 +32,12 @@ func BenchmarkTimeseries(b *testing.B) {
 	}
 	defer dbMysql.Close()
 
+	pgGorm, err := db.NewGormPostgresDB("pg-gorm", "localhost", db.PORT_POSTGRES, db.DB_USERNAME, db.DB_PASSWORD, db.DB_NAME, false)
+	if err != nil {
+		b.Fatalf(err.Error())
+	}
+	defer pgGorm.Close()
+
 	NUM_OBJECTS := 100_000
 	UPDATE_AND_READ_LIMIT := 4_000
 	fake := db.GenerateFakeData(NUM_OBJECTS)
@@ -39,6 +45,7 @@ func BenchmarkTimeseries(b *testing.B) {
 	var dbs []db.Database
 	dbs = append(dbs, dbMysql)
 	dbs = append(dbs, mongo)
+	dbs = append(dbs, pgGorm)
 	dbs = append(dbs, pgNative)
 	dbs = append(dbs, pgTimescale)
 
