@@ -29,13 +29,13 @@ const (
 )
 
 type DataObject struct {
-	CreatedAt time.Time `gorm:"not null" bson:"created_at"`
-	UpdatedAt time.Time `gorm:"not null" bson:"updated_at"`
-	StartTime time.Time `gorm:"not null;index;primaryKey" bson:"start_time"`
-	Interval  int64     `gorm:"not null;primaryKey" bson:"interval"`
-	Area      string    `gorm:"not null;primaryKey" bson:"area"`
-	Source    string    `gorm:"not null" bson:"source"`
-	Value     float64   `gorm:"not null" bson:"value"`
+	CreatedAt time.Time `gorm:"column:created_at;not null" bson:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;not null" bson:"updated_at"`
+	StartTime time.Time `gorm:"column:start_time;not null;index;primaryKey" bson:"start_time"`
+	Interval  int64     `gorm:"column:interval;not null;primaryKey" bson:"interval"`
+	Area      string    `gorm:"column:area;not null;primaryKey" bson:"area"`
+	Source    string    `gorm:"column:source;not null" bson:"source"`
+	Value     float64   `gorm:"column:value;not null" bson:"value"`
 }
 
 var (
