@@ -3,10 +3,10 @@ package db
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormPostgresDB struct {
@@ -62,18 +62,14 @@ func (db *GormPostgresDB) Close() error {
 }
 
 func (db *GormPostgresDB) UpsertSingle(docs []DataObject) error {
-	query := `
-		INSERT INTO ` + DB_TABLE_NAME + ` (created_at, updated_at, start_time, interval, area, source, value)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (start_time, interval, area) DO UPDATE
-		SET updated_at = EXCLUDED.updated_at, source = EXCLUDED.source, value = EXCLUDED.value`
-
 	for _, doc := range docs {
-		if err := db.db.Exec(query, doc.CreatedAt, doc.UpdatedAt, doc.StartTime, doc.Interval, doc.Area, doc.Source, doc.Value).Error; err != nil {
-			return fmt.Errorf("UpsertSingle: %v", err)
+		if err := db.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "start_time"}, {Name: "interval"}, {Name: "area"}},
+			DoUpdates: clause.AssignmentColumns([]string{"updated_at", "source", "value"}),
+		}).Create(&doc).Error; err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 
@@ -81,29 +77,10 @@ func (db *GormPostgresDB) UpsertBulk(docs []DataObject) error {
 	if len(docs) == 0 {
 		return nil // Nothing to upsert
 	}
-
-	// Prepare the base query
-	query := fmt.Sprintf(`
-        INSERT INTO %s (created_at, updated_at, start_time, interval, area, source, value)
-        VALUES `, DB_TABLE_NAME)
-
-	// Prepare the value placeholders and arguments
-	var valueStrings []string
-	var values []interface{}
-
-	for _, doc := range docs {
-		valueStrings = append(valueStrings, "(?, ?, ?, ?, ?, ?, ?)")
-		values = append(values, doc.CreatedAt, doc.UpdatedAt, doc.StartTime, doc.Interval, doc.Area, doc.Source, doc.Value)
-	}
-
-	// Join the placeholders into a single string
-	query += strings.Join(valueStrings, ", ")
-	query += `
-        ON CONFLICT (start_time, interval, area) DO UPDATE
-        SET updated_at = EXCLUDED.updated_at, source = EXCLUDED.source, value = EXCLUDED.value`
-
-	// Execute the query
-	return db.db.Exec(query, values...).Error
+	return db.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "start_time"}, {Name: "interval"}, {Name: "area"}},
+		DoUpdates: clause.AssignmentColumns([]string{"updated_at", "source", "value"}),
+	}).CreateInBatches(docs, 4000).Error
 }
 
 func (db *GormPostgresDB) GetOrderedWithLimit(limit int) ([]DataObject, error) {
